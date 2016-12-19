@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
+from urllib import urlencode
+
 DOCUMENTATION = '''
 module: bitbucket_deployment_key
 short_description: Manage Bitbucket deployment keys.
@@ -92,11 +95,6 @@ EXAMPLES = '''
   pubkey: '{{ ssh_pub_key.stdout }}'
 '''
 
-import sys  # noqa
-import json
-import re 
-from urllib import urlencode
-
 API_BASE = 'https://api.bitbucket.org/1.0/repositories/%s/deploy-keys'
 
 
@@ -115,10 +113,10 @@ class BitbucketSession:
         }
         response, info = fetch_url(
             self.module, self.base + url, method=method, data=data, headers=headers)
-        if not (200 <= info['status'] < 400):
+        if not 200 <= info['status'] < 400:
             self.module.fail_json(
-                msg=(" failed to send request %s to %s: %s"
-                     % (method, url, info['msg'])))
+                msg=(" failed to send request %s to %s [%d]: %s"
+                     % (method, self.base + url, info['status'], info['body'])))
         return response.read()
 
 
@@ -134,7 +132,7 @@ def create_key(session, name, key, check_mode):
         now = datetime.utcnow()
         return {
             'pk': 0,
-            'key': pubkey,
+            'key': key,
             'label': name
         }
     else:
